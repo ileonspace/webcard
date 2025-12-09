@@ -4,17 +4,27 @@ export async function onRequestPost(context) {
   try {
     const body = await request.json();
 
-    // 1. 管理员登录 (优先检查环境变量)
+    // --- 1. 管理员登录 (优先检查环境变量) ---
     if (body.username === env.ADMIN_USER && body.password === env.ADMIN_PASS) {
-      // 生成管理员 Token
       const token = btoa(JSON.stringify({ user: 'admin', role: 'admin' })) + '.sign';
       return jsonResp({ name: 'admin', role: 'admin' }, token);
     }
 
-    // 2. 普通用户处理 (查询 D1 数据库)
+    // --- 2. 普通用户处理 (查询 D1 数据库) ---
     const user = await env.DB.prepare('SELECT * FROM users WHERE name = ?').bind(body.username).first();
     
     if (user) {
+      // 检查 data 字段，确保其存在且是 JSON
+      const userData = JSON.parse(user.data || '{}');
+
+      // 【新增检查】：用户是否被禁用
+      if (userData.isBanned) {
+        return new Response(JSON.stringify({ error: 'Account has been banned.' }), { 
+          status: 403,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
       // A. 用户存在：验证密码
       if (user.password === body.password) {
         const token = btoa(JSON.stringify({ user: user.name, role: 'user' })) + '.sign';
@@ -27,14 +37,15 @@ export async function onRequestPost(context) {
       }
     } else {
       // B. 用户不存在：自动注册
-      // 初始化新用户的默认数据：【新增 displayTitle 字段】
+      // 初始化新用户的默认数据：【新增 displayTitle 和 isBanned 字段】
       const initialData = JSON.stringify({ 
         name: body.username, 
-        displayTitle: body.username, // 默认使用注册名作为展示标题
+        displayTitle: body.username,
         avatar: '', 
         bgImage: null,
         customColor: null,
         bio: '这里是简介...',
+        isBanned: false, // 默认未禁用
         config: { cardRadius: '3xl', avatarRadius: 'full', linkRadius: 'xl' },
         links: [],
         theme: 'blue'
@@ -58,7 +69,6 @@ function jsonResp(data, token) {
   return new Response(JSON.stringify({ user: data }), {
     headers: {
       'Content-Type': 'application/json',
-      // 设置 HttpOnly Cookie
       'Set-Cookie': `auth_token=${token}; HttpOnly; Secure; Path=/; Max-Age=86400; SameSite=Lax`
     }
   });
