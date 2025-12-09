@@ -99,7 +99,24 @@ const compressImage = (file) => {
   });
 };
 
-// --- 组件 (Components) ---
+// --- Components (省略部分组件代码以聚焦核心修复) ---
+
+// CardComponent Placeholder
+const CardComponent = ({ data, isAdmin, children }) => {
+    if (!data) return <div className="text-center py-10 text-gray-500">加载卡片数据...</div>;
+
+    // Use displayTitle for the main heading
+    const title = data.displayTitle || data.name || 'Web Card';
+
+    return (
+        <div className="bg-white p-8 rounded-xl shadow-lg text-center">
+            <h1 className="text-4xl font-extrabold text-gray-900 mb-2">{title}</h1>
+            <p className="text-gray-600">{data.bio}</p>
+            {isAdmin && <p className="mt-4 text-green-500">管理员/编辑模式</p>}
+            {children}
+        </div>
+    );
+};
 
 // Button Component
 const Button = ({ children, onClick, variant = 'primary', className = '', loading = false, icon: Icon, ...props }) => {
@@ -215,7 +232,7 @@ const LoginModal = (props) => {
 // Admin Dashboard Component
 // ----------------------------------------------------
 const AdminDashboard = ({ users, fetchUsers, adminName }) => {
-    const [showPassword, setShowPassword] = useState(null); // Tracks which user's password to show
+    const [showPassword, setShowPassword] = useState(null); 
     
     // Action API Wrapper
     const sendAdminAction = async (name, method, action = null) => {
@@ -341,7 +358,7 @@ const AdminDashboard = ({ users, fetchUsers, adminName }) => {
 // --- Main App ---
 const App = () => {
   const [currentUser, setCurrentUser] = useState(null);
-  const [viewUser, setViewUser] = null; 
+  const [viewUser, setViewUser] = useState(DEFAULT_USER); // <--- FIX 1: Initializing viewUser
   const [isEditing, setIsEditing] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [tempProfile, setTempProfile] = useState(null);
@@ -423,6 +440,7 @@ const App = () => {
         const data = await res.json();
         setViewUser(data);
       } else {
+        // If user not found (404) or API error, set to default template
         setViewUser(DEFAULT_USER);
       }
     } catch (e) {
@@ -567,10 +585,15 @@ const App = () => {
   // Check if current user is banned (to disable editing/saving)
   const isCurrentUserBanned = viewUser && viewUser.isBanned && viewUser.name === currentUser?.name;
 
-
-  if (loadingData && view !== 'admin') return <div className="min-h-screen flex items-center justify-center text-gray-400"><Loader2 className="animate-spin w-8 h-8" /></div>;
-  if (!viewUser && !loadingData && view === 'card') return <div className="min-h-screen flex items-center justify-center text-gray-400">用户数据加载失败或用户不存在</div>;
-
+  // Render Loader (shows only if fetching initial data and not in admin view)
+  if (loadingData && view !== 'admin') {
+      return <div className="min-h-screen flex items-center justify-center text-gray-400"><Loader2 className="animate-spin w-8 h-8" /></div>;
+  }
+  
+  // Render Not Found (should be handled gracefully by DEFAULT_USER, but kept for explicit check)
+  if (!viewUser && !loadingData && view === 'card') {
+      return <div className="min-h-screen flex items-center justify-center text-gray-400">用户数据加载失败或用户不存在</div>;
+  }
 
   const displayData = isEditing && tempProfile ? tempProfile : viewUser;
   const config = displayData?.config || DEFAULT_USER.config;
