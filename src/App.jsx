@@ -118,15 +118,14 @@ const CardComponent = ({ data, isAdmin, children }) => {
     );
 };
 
-// Button Component
+// Button Component 【优化 #1：按钮样式和动效】
 const Button = ({ children, onClick, variant = 'primary', className = '', loading = false, icon: Icon, ...props }) => {
-  const baseStyle = "px-3 py-1.5 rounded-lg font-normal transition-all duration-200 flex items-center gap-2 disabled:opacity-50 justify-center text-sm";
+  const baseStyle = "px-3 py-1.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 justify-center text-sm active:scale-98 shadow-md hover:shadow-lg";
   const variants = {
-    primary: "bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-lg shadow-blue-500/20",
-    secondary: "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300",
-    danger: "bg-red-50 text-red-600 border border-red-100 hover:bg-red-100",
-    ghost: "bg-transparent text-gray-500 hover:bg-gray-100 hover:text-gray-700",
-    icon: "p-2 aspect-square rounded-full hover:bg-black/10 text-gray-600"
+    primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-500/30",
+    secondary: "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 shadow-gray-200/50",
+    danger: "bg-red-600 text-white hover:bg-red-700 shadow-red-500/30",
+    ghost: "bg-transparent text-gray-500 hover:bg-gray-100 hover:text-gray-700 shadow-none hover:shadow-sm"
   };
   return (
     <button onClick={onClick} disabled={loading} className={`${baseStyle} ${variants[variant]} ${className}`} {...props}>
@@ -229,7 +228,7 @@ const LoginModal = (props) => {
 
 
 // ----------------------------------------------------
-// Admin Dashboard Component
+// Admin Dashboard Component 【优化 #3：管理界面重构】
 // ----------------------------------------------------
 const AdminDashboard = ({ users, fetchUsers, adminName }) => {
     const [showPassword, setShowPassword] = useState(null); 
@@ -241,7 +240,9 @@ const AdminDashboard = ({ users, fetchUsers, adminName }) => {
             return;
         }
         
-        let url = `/api/user?name=${name}`;
+        // 编码用户名
+        const encodedName = encodeURIComponent(name); 
+        let url = `/api/user?name=${encodedName}`;
         if (action) url += `&action=${action}`;
 
         try {
@@ -274,7 +275,7 @@ const AdminDashboard = ({ users, fetchUsers, adminName }) => {
     const sortedUsers = useMemo(() => {
         const sorted = [...users];
         sorted.sort((a, b) => {
-            if (a.name === adminName) return -1;
+            if (a.name === adminName) return -1; // Admin to the top
             if (b.name === adminName) return 1;
             return 0;
         });
@@ -283,35 +284,35 @@ const AdminDashboard = ({ users, fetchUsers, adminName }) => {
 
     // Admin UI style
     return (
-        <div className="max-w-7xl mx-auto w-full bg-white p-6 rounded-xl shadow-2xl">
+        <div className="max-w-7xl mx-auto w-full bg-white p-6 rounded-3xl shadow-2xl">
             <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">管理中心</h2>
             <p className="text-sm text-gray-500 mb-4">当前注册用户总数：{users.length}</p>
 
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-100/50">
                         <tr>
-                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户名</th>
-                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">密码 (演示)</th>
-                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">注册时间</th>
-                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">用户名 (Name)</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">状态</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">密码 (演示)</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">注册时间</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">操作</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {sortedUsers.map((user) => (
-                            <tr key={user.name} className={user.name === adminName ? 'bg-indigo-50 font-semibold' : user.data.isBanned ? 'bg-red-50 text-red-700' : 'hover:bg-gray-50'}>
+                            <tr key={user.name} className={user.name === adminName ? 'bg-indigo-50 font-semibold' : user.data.isBanned ? 'bg-red-50 text-red-700 hover:bg-red-100/70' : 'hover:bg-gray-50'}>
                                 {/* User Name */}
-                                <td className="px-3 py-4 whitespace-nowrap text-sm">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                                     {user.name}
                                     {user.name === adminName && <span className="text-xs text-indigo-600 font-bold ml-2">(ADMIN)</span>}
                                 </td>
                                 {/* Status */}
-                                <td className="px-3 py-4 whitespace-nowrap text-sm">
-                                    {user.data.isBanned ? <span className="text-red-500 flex items-center gap-1"><Ban className="w-4 h-4" />已禁用</span> : <span className="text-green-600 flex items-center gap-1"><Check className="w-4 h-4" />正常</span>}
+                                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                    {user.data.isBanned ? <span className="text-red-500 flex items-center gap-1"><Ban className="w-4 h-4" />禁用</span> : <span className="text-green-600 flex items-center gap-1"><Check className="w-4 h-4" />正常</span>}
                                 </td>
                                 {/* Password (Sensitive) */}
-                                <td className="px-3 py-4 whitespace-nowrap text-sm font-mono">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm font-mono">
                                     {user.name === adminName ? '********' : (
                                         <div className="flex items-center gap-2">
                                             <span>{showPassword === user.name ? user.password : '********'}</span>
@@ -322,26 +323,24 @@ const AdminDashboard = ({ users, fetchUsers, adminName }) => {
                                     )}
                                 </td>
                                 {/* Created At */}
-                                <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(user.created_at).toLocaleDateString()}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{new Date(user.created_at).toLocaleDateString()}</td>
                                 {/* Actions */}
-                                <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-center space-x-2">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-center flex gap-2 justify-center">
                                     {user.name !== adminName && (
                                         <>
                                             <Button 
                                                 variant={user.data.isBanned ? 'primary' : 'secondary'} 
                                                 onClick={() => handleBanUnban(user)} 
-                                                className="w-16"
+                                                className="w-16 !px-2"
                                             >
                                                 {user.data.isBanned ? '启用' : '禁用'}
                                             </Button>
                                             <Button 
-                                                variant="ghost" 
+                                                variant="danger" 
                                                 icon={Trash2} 
                                                 onClick={() => handleDelete(user.name)}
-                                                className="hover:text-red-600 !p-1.5"
-                                            >
-                                                删
-                                            </Button>
+                                                className="!p-2 aspect-square" // Make delete button small and square
+                                            />
                                         </>
                                     )}
                                 </td>
@@ -358,7 +357,7 @@ const AdminDashboard = ({ users, fetchUsers, adminName }) => {
 // --- Main App ---
 const App = () => {
   const [currentUser, setCurrentUser] = useState(null);
-  const [viewUser, setViewUser] = useState(DEFAULT_USER); // <--- FIX 1: Initializing viewUser
+  const [viewUser, setViewUser] = useState(DEFAULT_USER); 
   const [isEditing, setIsEditing] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [tempProfile, setTempProfile] = useState(null);
@@ -384,7 +383,9 @@ const App = () => {
       if (!isAdmin) return;
       setLoadingData(true); 
       try {
-          const response = await fetch('/api/user?all=true');
+          // 【修复 #1】: 使用绝对路径
+          const absoluteUrl = window.location.origin + '/api/user?all=true'; 
+          const response = await fetch(absoluteUrl);
           if (response.ok) {
               const users = await response.json();
               setAllUsers(users);
@@ -416,7 +417,6 @@ const App = () => {
         setCurrentUser(user);
       } catch (e) {
         console.error("Invalid token found:", e);
-        // If token is invalid, attempt to clear it.
         document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       }
     }
@@ -434,13 +434,17 @@ const App = () => {
 
   const fetchUser = async (username) => {
     setLoadingData(true);
+    // 【修复 #1】: 使用绝对路径
+    const encodedUsername = encodeURIComponent(username);
+    const absoluteUrl = `${window.location.origin}/api/user?name=${encodedUsername}`;
+    
     try {
-      const res = await fetch(`/api/user?name=${username}`);
+      // Use the absolute URL
+      const res = await fetch(absoluteUrl);
       if (res.ok) {
         const data = await res.json();
         setViewUser(data);
       } else {
-        // If user not found (404) or API error, set to default template
         setViewUser(DEFAULT_USER);
       }
     } catch (e) {
