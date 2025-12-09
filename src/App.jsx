@@ -247,6 +247,7 @@ const AdminDashboard = ({ users, fetchUsers, adminName }) => {
         
         // 编码用户名
         const encodedName = encodeURIComponent(name); 
+        // 【修复 #1】: 使用最简单的相对路径 (这在 AdminDashboard 中通常是可靠的，因为请求是由前端发起的)
         let url = `/api/user?name=${encodedName}`;
         if (action) url += `&action=${action}`;
 
@@ -336,7 +337,7 @@ const AdminDashboard = ({ users, fetchUsers, adminName }) => {
                                             <Button 
                                                 variant={user.data.isBanned ? 'secondary' : 'danger'} 
                                                 onClick={() => handleBanUnban(user)} 
-                                                className="w-16 !px-2"
+                                                className="w-16"
                                             >
                                                 {user.data.isBanned ? '启用' : '禁用'}
                                             </Button>
@@ -388,7 +389,7 @@ const App = () => {
       if (!isAdmin) return;
       setLoadingData(true); 
       try {
-          // 【修复 #1】: 使用最简单的相对路径
+          // 【修复 #1】: 使用最简单的相对路径 (这在 Cloudflare Pages Functions 中通常有效)
           const response = await fetch('/api/user?all=true');
           if (response.ok) {
               const users = await response.json();
@@ -553,7 +554,7 @@ const App = () => {
         // Find the closest draggable item element
         const itemElement = targetElement.closest('[data-drag-index]');
         if (itemElement) {
-          const newIdx = parseInt(itemElement.dataset.dragIndex);
+          const newIdx = parseInt(itemElement.dataset.drag-index);
           if (dragOverItem.current !== newIdx) {
             dragOverItem.current = newIdx;
           }
