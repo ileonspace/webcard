@@ -2,9 +2,52 @@ export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
 
-  // GET: 获取用户信息 (公开)
+  // 辅助函数：解析并校验 Token，获取 userRole
+  function decodeToken(request) {
+    const cookie = request.headers.get('Cookie');
+    if (!cookie || !cookie.includes('auth_token=')) return null;
+
+    const token = cookie.split('auth_token=')[1].split(';')[0];
+    try {
+      // 危险：生产环境请校验签名 (在您的简单实现中，只解析了 base64 部分)
+      return JSON.parse(atob(token.split('.')[0])); 
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // GET 请求处理
   if (request.method === 'GET') {
     const name = url.searchParams.get('name');
+    const getAll = url.searchParams.get('all');
+    const userRole = decodeToken(request);
+
+    // 【新增功能】: 管理员获取所有用户列表 (GET /api/user?all=true)
+    if (getAll === 'true' && userRole && userRole.role === 'admin') {
+        try {
+            // 只选择 name, created_at, 和 data
+            const { results } = await env.DB.prepare(
+                'SELECT name, created_at, data FROM users'
+            ).all();
+            
+            // 格式化输出 (将 data 从 JSON 字符串转回对象，以便前端处理)
+            const users = results.map(user => ({
+                name: user.name,
+                created_at: user.created_at,
+                // 解析 data 字段，以便前端直接使用对象
+                data: JSON.parse(user.data) 
+            }));
+
+            return new Response(JSON.stringify(users), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+        } catch (e) {
+            return new Response('Failed to fetch all users: ' + e.message, { status: 500 });
+        }
+    }
+
+
+    // 默认行为: 获取单个用户信息 (公开)
     if (!name) return new Response('Missing name', { status: 400 });
 
     const user = await env.DB.prepare('SELECT data FROM users WHERE name = ?').bind(name).first();
@@ -19,35 +62,26 @@ export async function onRequest(context) {
   // POST: 保存/更新用户信息 (需鉴权)
   if (request.method === 'POST') {
     // 1. 鉴权
-    const cookie = request.headers.get('Cookie');
-    if (!cookie || !cookie.includes('auth_token=')) {
+    const userRole = decodeToken(request);
+    if (!userRole) {
       return new Response('Unauthorized', { status: 401 });
     }
     
-    // 简单的 Token 验证 (实际请使用 verifyToken)
-    const token = cookie.split('auth_token=')[1].split(';')[0];
-    // 解析 Token 的 payload，获取用户名
-    const userRole = JSON.parse(atob(token.split('.')[0])); 
-
     try {
       const data = await request.json();
       
       // 强制覆盖 name 为当前登录用户，防止篡改他人数据
-      // 这里的 userRole.user 无论是 'admin' 还是 '普通用户' 的名字都是正确的
       const username = userRole.user; 
       data.name = username; 
 
-      // 2. 核心修复：使用 UPDATE 语句，只更新 data 字段
-      // 这样可以避免因 admin 用户没有 password 字段而与 INSERT 逻辑产生冲突
+      // 2. 使用 UPDATE 语句，只更新 data 字段
       const result = await env.DB.prepare(
         'UPDATE users SET data = ?1 WHERE name = ?2'
       ).bind(JSON.stringify(data), username).run();
       
       // 检查是否更新成功 (rows_affected 应该大于 0)
       if (result.meta.rows_affected === 0) {
-          // 如果没有行受到影响，说明数据库中没有该用户记录。
-          // 尽管 auth.js 会自动注册普通用户，但为了健壮性，这里可以返回错误或添加 INSERT 逻辑。
-          // 考虑到 admin 用户是通过环境变量登录的，我们假设 admin 记录是存在的。
+          // 如果没有行受到影响，返回 404 错误
           return new Response('User record not found in DB for update.', { status: 404 });
       }
 

@@ -30,7 +30,10 @@ export async function onRequestPost(context) {
       // B. 用户不存在：自动注册
       // 初始化新用户的默认数据
       const initialData = JSON.stringify({ 
+        // 保持 name 作为内部标识
         name: body.username, 
+        // 【新增字段】用作用户卡片上的大标题，默认为注册名
+        displayTitle: body.username, 
         links: [], 
         theme: 'blue',
         bio: 'Hello World!',
