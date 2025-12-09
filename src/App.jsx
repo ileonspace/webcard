@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { 
   // 基础操作
   User, Edit2, Save, LogOut, Shield, Trash2, Ban, ExternalLink, 
-  Loader2, Camera, Lock, Image as ImageIcon, Plus, Search, X, Check,
+  Loader2, Camera, Lock, Image as ImageIcon, Plus, Search, X, Check, Eye, EyeOff,
   // 排版与设置
   Type, Minus, AlignLeft, AlignCenter, AlignRight, Settings, GripVertical, Palette,
   // 社交与品牌
@@ -19,12 +19,12 @@ import {
 } from 'lucide-react';
 
 /**
- * Core Configuration
+ * 核心配置 (Core Configuration)
  */
 const MAX_IMAGE_SIZE = 500;
 const IMAGE_QUALITY = 0.7;
 
-// Icon Map
+// 图标库映射 (Icon Map)
 const ICON_MAP = {
   github: Github, twitter: Twitter, email: Mail, linkedin: Linkedin, 
   facebook: Facebook, instagram: Instagram, youtube: Youtube, twitch: Twitch,
@@ -58,7 +58,7 @@ const RADIUS_OPTIONS = {
   '2xl': 'rounded-[2rem]', '3xl': 'rounded-[2.5rem]', full: 'rounded-full',
 };
 
-// Default User Template
+// 默认空白用户模板 (Default User Template)
 const DEFAULT_USER = {
   name: 'New User',
   displayTitle: 'Web Card', // New field for customizable main title
@@ -66,12 +66,13 @@ const DEFAULT_USER = {
   bgImage: null,
   customColor: null,
   bio: '这里是简介...',
+  isBanned: false, // New field
   config: { cardRadius: '3xl', avatarRadius: 'full', linkRadius: 'xl' },
   links: [],
   theme: 'blue'
 };
 
-// Image Compression Utility
+// 图片压缩工具 (Image Compression Utility)
 const compressImage = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -98,28 +99,11 @@ const compressImage = (file) => {
   });
 };
 
-// --- Components ---
-
-// CardComponent Placeholder
-const CardComponent = ({ data, isAdmin, children }) => {
-    if (!data) return <div className="text-center py-10 text-gray-500">加载卡片数据...</div>;
-
-    // Use displayTitle for the main heading
-    const title = data.displayTitle || data.name || 'Web Card';
-
-    return (
-        <div className="bg-white p-8 rounded-xl shadow-lg text-center">
-            <h1 className="text-4xl font-extrabold text-gray-900 mb-2">{title}</h1>
-            <p className="text-gray-600">{data.bio}</p>
-            {isAdmin && <p className="mt-4 text-green-500">管理员/编辑模式</p>}
-            {children}
-        </div>
-    );
-};
+// --- 组件 (Components) ---
 
 // Button Component
 const Button = ({ children, onClick, variant = 'primary', className = '', loading = false, icon: Icon, ...props }) => {
-  const baseStyle = "px-4 py-2 rounded-lg font-normal transition-all duration-200 flex items-center gap-2 disabled:opacity-50 justify-center text-sm";
+  const baseStyle = "px-3 py-1.5 rounded-lg font-normal transition-all duration-200 flex items-center gap-2 disabled:opacity-50 justify-center text-sm";
   const variants = {
     primary: "bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-lg shadow-blue-500/20",
     secondary: "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300",
@@ -135,7 +119,7 @@ const Button = ({ children, onClick, variant = 'primary', className = '', loadin
   );
 };
 
-// Input Component
+// Input Component (simplified for brevity)
 const Input = ({ label, value, onChange, placeholder, type = "text" }) => (
   <div className="mb-4">
     <label className="block text-sm font-normal text-gray-600 mb-1">{label}</label>
@@ -143,7 +127,7 @@ const Input = ({ label, value, onChange, placeholder, type = "text" }) => (
   </div>
 );
 
-// RadiusSlider Component
+// RadiusSlider Component (omitted for brevity)
 const RadiusSlider = ({ label, value, onChange }) => {
   const options = Object.keys(RADIUS_OPTIONS);
   const safeIndex = Math.max(0, options.indexOf(value || 'md'));
@@ -159,7 +143,7 @@ const RadiusSlider = ({ label, value, onChange }) => {
   );
 };
 
-// IconPicker Component
+// IconPicker Component (omitted for brevity)
 const IconPicker = ({ value, onChange, onClose }) => {
   const [search, setSearch] = useState('');
   const filteredIcons = Object.keys(ICON_MAP).filter(key => key.toLowerCase().includes(search.toLowerCase()));
@@ -180,100 +164,168 @@ const IconPicker = ({ value, onChange, onClose }) => {
   );
 };
 
-// LoginModal Component
-const LoginModal = ({ onClose, onLogin }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleLogin = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      if (res.ok) {
+// LoginModal Component (omitted for brevity)
+const LoginModal = (props) => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+  
+    const handleLogin = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
         const data = await res.json();
-        onLogin(data.user);
-      } else {
-        // Use custom Modal instead of alert()
-        setError('登录失败：用户名或密码错误');
+        if (res.ok) {
+          props.onLogin(data.user);
+        } else {
+          setError(data.error || '登录失败：用户名或密码错误');
+        }
+      } catch (e) {
+        setError('网络错误');
       }
-    } catch (e) {
-      setError('网络错误');
-    }
-    setLoading(false);
-  };
+      setLoading(false);
+    };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 animate-in zoom-in-95 duration-200">
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4"><Lock className="w-6 h-6" /></div>
-          <h2 className="text-xl font-normal text-gray-900">登录 / 注册</h2>
-          <p className="text-gray-500 mt-2 text-sm font-normal">如果账号不存在将自动注册</p>
+    return (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 animate-in zoom-in-95 duration-200">
+            <div className="text-center mb-8">
+              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4"><Lock className="w-6 h-6" /></div>
+              <h2 className="text-xl font-normal text-gray-900">登录 / 注册</h2>
+              <p className="text-gray-500 mt-2 text-sm font-normal">如果账号不存在将自动注册</p>
+            </div>
+            <Input label="用户名" value={username} onChange={setUsername} placeholder="输入用户名" />
+            <Input label="密码" value={password} onChange={setPassword} type="password" placeholder="••••••••" />
+            {error && <p className="text-red-500 text-xs mb-4 text-center">{error}</p>}
+            <Button onClick={handleLogin} loading={loading} className="w-full mt-6">进入主页</Button>
+            <Button onClick={props.onClose} variant="ghost" className="w-full mt-2">取消</Button>
+          </div>
         </div>
-        <Input label="用户名" value={username} onChange={setUsername} placeholder="输入用户名" />
-        <Input label="密码" value={password} onChange={setPassword} type="password" placeholder="••••••••" />
-        {error && <p className="text-red-500 text-xs mb-4 text-center">{error}</p>}
-        <Button onClick={handleLogin} loading={loading} className="w-full mt-6">进入主页</Button>
-        <Button onClick={onClose} variant="ghost" className="w-full mt-2">取消</Button>
-      </div>
-    </div>
-  );
+      );
 };
+
 
 // ----------------------------------------------------
 // Admin Dashboard Component
 // ----------------------------------------------------
-const AdminDashboard = ({ users, fetchUsers }) => {
-    // Placeholder for DELETE function
-    const handleDelete = async (name) => {
-        // Use custom Modal instead of alert()
-        alert(`DELETE 功能未实现。请在 functions/api/user.js 中添加删除用户 ${name} 的逻辑。`);
+const AdminDashboard = ({ users, fetchUsers, adminName }) => {
+    const [showPassword, setShowPassword] = useState(null); // Tracks which user's password to show
+    
+    // Action API Wrapper
+    const sendAdminAction = async (name, method, action = null) => {
+        if (name === adminName) {
+            alert("不能对管理员账号执行此操作！");
+            return;
+        }
+        
+        let url = `/api/user?name=${name}`;
+        if (action) url += `&action=${action}`;
+
+        try {
+            const response = await fetch(url, { method: method });
+            if (response.ok) {
+                alert(`${name} 操作成功: ${action || method}!`);
+                fetchUsers();
+            } else {
+                alert(`操作失败: ${await response.text()}`);
+            }
+        } catch (e) {
+            alert(`网络错误: ${e.message}`);
+        }
+    };
+
+    const handleDelete = (name) => {
+        if (confirm(`警告：您确定要永久删除用户 ${name} 吗? 此操作不可逆!`)) {
+            sendAdminAction(name, 'DELETE');
+        }
+    };
+
+    const handleBanUnban = (user) => {
+        const action = user.data.isBanned ? 'unban' : 'ban';
+        if (confirm(`确定要${action === 'ban' ? '禁用' : '启用'}用户 ${user.name} 吗?`)) {
+            sendAdminAction(user.name, 'PATCH', action);
+        }
     };
     
+    // Sort logic to put Admin account first
+    const sortedUsers = useMemo(() => {
+        const sorted = [...users];
+        sorted.sort((a, b) => {
+            if (a.name === adminName) return -1;
+            if (b.name === adminName) return 1;
+            return 0;
+        });
+        return sorted;
+    }, [users, adminName]);
+
     // Admin UI style
     return (
-        <div className="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-2xl">
-            <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">用户管理中心</h2>
+        <div className="max-w-7xl mx-auto w-full bg-white p-6 rounded-xl shadow-2xl">
+            <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">管理中心</h2>
             <p className="text-sm text-gray-500 mb-4">当前注册用户总数：{users.length}</p>
 
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户名 (Name)</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">卡片标题 (Title)</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">注册时间</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户名</th>
+                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">密码 (演示)</th>
+                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">注册时间</th>
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {users.map((user) => (
-                            <tr key={user.name} className={user.name === 'admin' ? 'bg-yellow-50' : ''}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    {user.name} {user.name === 'admin' && <span className="text-xs text-red-500">(Admin)</span>}
+                        {sortedUsers.map((user) => (
+                            <tr key={user.name} className={user.name === adminName ? 'bg-indigo-50 font-semibold' : user.data.isBanned ? 'bg-red-50 text-red-700' : 'hover:bg-gray-50'}>
+                                {/* User Name */}
+                                <td className="px-3 py-4 whitespace-nowrap text-sm">
+                                    {user.name}
+                                    {user.name === adminName && <span className="text-xs text-indigo-600 font-bold ml-2">(ADMIN)</span>}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {/* Use data.displayTitle, falling back to name */}
-                                    {user.data.displayTitle || user.name} 
+                                {/* Status */}
+                                <td className="px-3 py-4 whitespace-nowrap text-sm">
+                                    {user.data.isBanned ? <span className="text-red-500 flex items-center gap-1"><Ban className="w-4 h-4" />已禁用</span> : <span className="text-green-600 flex items-center gap-1"><Check className="w-4 h-4" />正常</span>}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(user.created_at).toLocaleDateString()}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    {/* Admin can only delete non-admin users */}
-                                    {user.name !== 'admin' && (
-                                        <button 
-                                            onClick={() => handleDelete(user.name)}
-                                            className="text-red-600 hover:text-red-900 transition duration-150"
-                                            title="删除用户"
-                                        >
-                                            删除
-                                        </button>
+                                {/* Password (Sensitive) */}
+                                <td className="px-3 py-4 whitespace-nowrap text-sm font-mono">
+                                    {user.name === adminName ? '********' : (
+                                        <div className="flex items-center gap-2">
+                                            <span>{showPassword === user.name ? user.password : '********'}</span>
+                                            <button onClick={() => setShowPassword(showPassword === user.name ? null : user.name)} className="text-gray-500 hover:text-gray-900">
+                                                {showPassword === user.name ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                    )}
+                                </td>
+                                {/* Created At */}
+                                <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(user.created_at).toLocaleDateString()}</td>
+                                {/* Actions */}
+                                <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-center space-x-2">
+                                    {user.name !== adminName && (
+                                        <>
+                                            <Button 
+                                                variant={user.data.isBanned ? 'primary' : 'secondary'} 
+                                                onClick={() => handleBanUnban(user)} 
+                                                className="w-16"
+                                            >
+                                                {user.data.isBanned ? '启用' : '禁用'}
+                                            </Button>
+                                            <Button 
+                                                variant="ghost" 
+                                                icon={Trash2} 
+                                                onClick={() => handleDelete(user.name)}
+                                                className="hover:text-red-600 !p-1.5"
+                                            >
+                                                删
+                                            </Button>
+                                        </>
                                     )}
                                 </td>
                             </tr>
@@ -285,10 +337,11 @@ const AdminDashboard = ({ users, fetchUsers }) => {
     );
 };
 
+
 // --- Main App ---
 const App = () => {
   const [currentUser, setCurrentUser] = useState(null);
-  const [viewUser, setViewUser] = useState(null); 
+  const [viewUser, setViewUser] = null; 
   const [isEditing, setIsEditing] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [tempProfile, setTempProfile] = useState(null);
@@ -307,6 +360,7 @@ const App = () => {
 
   // Check if current user is admin
   const isAdmin = useMemo(() => currentUser && currentUser.role === 'admin', [currentUser]);
+  const adminName = 'admin'; // Assumed admin username
 
   // Function to fetch all users (Admin only)
   const fetchAllUsers = useCallback(async () => {
@@ -334,15 +388,21 @@ const App = () => {
     
     // 2. Safely extract the last segment as the intended username
     const segments = path.split('/');
-    const username = segments.pop() || 'admin'; // Use 'admin' as default view
+    const username = segments.pop() || adminName; 
     
-    // 3. TODO: In production, add a fetch('/api/check-session') here
-    // to verify the auth_token cookie and set the actual currentUser status.
-    
-    // 【移除硬编码】：不再强制设置 currentUser，让登录按钮生效
-    // setCurrentUser({ name: 'admin', role: 'admin' }); // <-- REMOVED THIS LINE
-
-    // Now, if no cookie is present, currentUser remains null, showing Login button.
+    // 3. Session Check: Check if auth_token cookie exists to set user status
+    const cookieMatch = document.cookie.match(/auth_token=([^;]+)/);
+    if (cookieMatch) {
+      try {
+        const tokenPayload = atob(cookieMatch[1].split('.')[0]);
+        const user = JSON.parse(tokenPayload);
+        setCurrentUser(user);
+      } catch (e) {
+        console.error("Invalid token found:", e);
+        // If token is invalid, attempt to clear it.
+        document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      }
+    }
     
     fetchUser(username);
   }, []);
@@ -358,7 +418,6 @@ const App = () => {
   const fetchUser = async (username) => {
     setLoadingData(true);
     try {
-      // The username should now be clean
       const res = await fetch(`/api/user?name=${username}`);
       if (res.ok) {
         const data = await res.json();
@@ -374,31 +433,36 @@ const App = () => {
   };
 
   const handleLogin = (user) => {
-    // 【修改点】：登录成功后，才设置 currentUser 状态
     setCurrentUser(user);
     setShowLogin(false);
-    // 导航到该用户的主页
+    // Navigate to the user's home page
     window.history.pushState({}, '', `/${user.name}`);
     fetchUser(user.name);
   };
 
   const handleLogout = () => {
-    // 1. 清除前端状态
+    // 1. Clear frontend state
     setCurrentUser(null);
     setIsEditing(false);
     setView('card');
     
-    // 2. 清除 Cookie (需要后端支持 /api/logout 或前端手动清除)
-    // 简单粗暴的清除方式（如果 Cookie 不是 HttpOnly）：
+    // 2. Clear Cookie 
     document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     
-    // 3. 重定向到首页或默认页面
+    // 3. Redirect to home/default view
     window.location.pathname = '/'; 
   };
 
 
   const handleSave = async () => {
     if (!tempProfile) return;
+    
+    // Check for banned status before saving
+    if (viewUser && viewUser.isBanned) {
+        alert("账户已被禁用，无法保存更改。");
+        return;
+    }
+    
     try {
       const res = await fetch('/api/user', {
         method: 'POST',
@@ -408,7 +472,6 @@ const App = () => {
       if (res.ok) {
         setViewUser({ ...tempProfile });
         setIsEditing(false);
-        // Use custom Modal instead of alert()
         alert('保存成功！');
       } else {
         alert('保存失败，请重试');
@@ -433,8 +496,59 @@ const App = () => {
   };
   const removeLink = (index) => { updateProfile('links', tempProfile.links.filter((_, i) => i !== index)); };
   
+  // Drag and Drop Logic (Touch and Mouse)
+  const handleDragStart = (e, idx) => {
+    dragItem.current = idx;
+    e.target.style.opacity = '0.5';
+    if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/html", e.target);
+    }
+  };
+  const handleDragEnter = (e, idx) => {
+    dragOverItem.current = idx;
+  };
+  const handleDragEnd = (e) => {
+    handleSort();
+    if (e.target) e.target.style.opacity = '1';
+  };
+  
+  const handleTouchStart = (e, idx) => {
+      e.preventDefault(); 
+      dragItem.current = idx;
+      e.currentTarget.style.opacity = '0.5';
+  };
+
+  const handleTouchMove = (e) => {
+      // Find the element currently under the touch point
+      const touch = e.touches[0];
+      const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+      
+      if (targetElement) {
+        // Find the closest draggable item element
+        const itemElement = targetElement.closest('[data-drag-index]');
+        if (itemElement) {
+          const newIdx = parseInt(itemElement.dataset.dragIndex);
+          if (dragOverItem.current !== newIdx) {
+            dragOverItem.current = newIdx;
+          }
+        }
+      }
+  };
+
+  const handleTouchEnd = (e) => {
+      if (dragItem.current !== null && dragOverItem.current !== null) {
+          handleSort();
+      }
+      e.currentTarget.style.opacity = '1';
+      dragItem.current = null;
+      dragOverItem.current = null;
+  };
+
   const handleSort = () => {
     const _links = [...tempProfile.links];
+    if (dragOverItem.current === null || dragItem.current === dragOverItem.current) return;
+
     const draggedItemContent = _links.splice(dragItem.current, 1)[0];
     _links.splice(dragOverItem.current, 0, draggedItemContent);
     dragItem.current = null; dragOverItem.current = null;
@@ -449,6 +563,10 @@ const App = () => {
   };
 
   const handleCustomColor = (e) => setTempProfile(prev => ({ ...prev, theme: 'custom', customColor: e.target.value, bgImage: null }));
+
+  // Check if current user is banned (to disable editing/saving)
+  const isCurrentUserBanned = viewUser && viewUser.isBanned && viewUser.name === currentUser?.name;
+
 
   if (loadingData && view !== 'admin') return <div className="min-h-screen flex items-center justify-center text-gray-400"><Loader2 className="animate-spin w-8 h-8" /></div>;
   if (!viewUser && !loadingData && view === 'card') return <div className="min-h-screen flex items-center justify-center text-gray-400">用户数据加载失败或用户不存在</div>;
@@ -467,52 +585,56 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-[#EAF3F7] flex flex-col items-center justify-center p-4 font-sans text-gray-900 transition-colors duration-500">
-      <nav className="fixed top-0 left-0 right-0 p-4 flex justify-between items-center z-40 pointer-events-none">
-        <div className="pointer-events-auto font-medium text-gray-400 tracking-widest text-xs">WEB CARD</div>
-        <div className="pointer-events-auto flex gap-2">
+      <nav className="fixed top-0 left-0 right-0 p-3 sm:p-4 flex justify-end items-center z-40">
+        
+        {/* UI Replaced: Simplified Navigation Bar */}
+        <div className="pointer-events-auto flex gap-2 sm:gap-3 bg-white/70 backdrop-blur rounded-full shadow-lg p-1.5 border border-gray-100">
           {currentUser ? (
             <>
-              {/* Admin Switch Button */}
-              {isAdmin && view === 'card' && (
+              {/* Admin Switch Button (管理) */}
+              {isAdmin && (
                   <Button 
-                      variant="primary" 
+                      variant={view === 'card' ? "primary" : "ghost"}
                       icon={Shield} 
-                      onClick={() => setView('admin')}
+                      onClick={() => setView(view === 'card' ? 'admin' : 'card')}
+                      title="管理中心"
+                      className="!p-2 aspect-square" // Make button square for mobile
                   >
-                      管理用户
-                  </Button>
-              )}
-              {isAdmin && view === 'admin' && (
-                  <Button 
-                      variant="secondary" 
-                      icon={User} 
-                      onClick={() => setView('card')}
-                  >
-                      返回我的卡片
+                     {view === 'card' ? '管理' : ''}
                   </Button>
               )}
 
-              {/* Edit/Save Button (only for current user and in card view) */}
+              {/* Edit/Save Button (only for current user and in card view, UNLESS BANNED) */}
               {currentUser.name === viewUser?.name && view === 'card' && (
-                <Button variant={isEditing ? "primary" : "secondary"} icon={isEditing ? Save : Edit2} onClick={() => { if (isEditing) handleSave(); else { setTempProfile({ ...viewUser }); setIsEditing(true); } }}>{isEditing ? '保存' : '编辑'}</Button>
+                <Button 
+                  // Disable editing/saving if user is banned
+                  disabled={isCurrentUserBanned}
+                  variant={isEditing ? "primary" : "secondary"} 
+                  icon={isEditing ? Save : Edit2} 
+                  onClick={() => { if (isEditing) handleSave(); else { setTempProfile({ ...viewUser }); setIsEditing(true); } }}
+                  title={isEditing ? '保存' : '编辑'}
+                  className="!p-2 aspect-square sm:!px-4"
+                >
+                  <span className="hidden sm:inline">{isEditing ? '保存' : '编辑'}</span>
+                </Button>
               )}
-              {/* 【修改点】：退出按钮调用新的 handleLogout 函数 */}
-              <Button variant="ghost" icon={LogOut} className="!bg-white/80 backdrop-blur shadow-sm" onClick={handleLogout} />
+              {/* Logout Button */}
+              <Button variant="ghost" icon={LogOut} className="!p-2 aspect-square" onClick={handleLogout} title="退出" />
             </>
           ) : (
-            <Button variant="primary" onClick={() => setShowLogin(true)}>登录</Button>
+            <Button variant="primary" onClick={() => setShowLogin(true)} className="!px-4">登录</Button>
           )}
         </div>
       </nav>
 
-      <main className="w-full max-w-md relative pb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <main className="w-full max-w-xl relative pb-10 mt-16 sm:mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
         
         {/* Render Card View */}
         {view === 'card' && (
-           <div className="w-full max-w-md relative">
+           <div className="w-full max-w-md mx-auto relative">
               <div className={`bg-white shadow-2xl overflow-hidden transition-all duration-300 transform ${RADIUS_OPTIONS[config.cardRadius] || 'rounded-[2.5rem]'}`}>
                 <div className={`h-36 relative transition-all duration-500 bg-cover bg-center ${bgClassName}`} style={getBackgroundStyle()}>
-                  {isEditing && (
+                  {isEditing && !isCurrentUserBanned && (
                     <div className="absolute top-2 right-2 z-20">
                       <button onClick={() => bgInputRef.current?.click()} className={`px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur text-xs font-medium text-gray-700 shadow-lg flex items-center gap-1.5 hover:bg-white transition-all ${displayData.bgImage ? 'ring-2 ring-blue-500' : ''}`}><ImageIcon className="w-3 h-3" />更换背景</button>
                       <input type="file" ref={bgInputRef} className="absolute opacity-0 pointer-events-none" accept="image/*" onChange={(e) => handleUpload(e, 'bgImage')} />
@@ -523,13 +645,13 @@ const App = () => {
                 <div className="px-8 pb-8">
                   <div className="relative -mt-16 mb-6 flex justify-between items-end">
                     <div className="relative group">
-                      <div className={`w-28 h-28 border-[4px] border-white shadow-lg bg-white overflow-hidden relative ${RADIUS_OPTIONS[config.avatarRadius] || 'rounded-full'}`}><img src={displayData.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=new'} className="w-full h-full object-cover" alt="Avatar"/>{isEditing && <div onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"><Camera className="w-8 h-8 text-white/90" /></div>}</div>
+                      <div className={`w-28 h-28 border-[4px] border-white shadow-lg bg-white overflow-hidden relative ${RADIUS_OPTIONS[config.avatarRadius] || 'rounded-full'}`}><img src={displayData.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=new'} className="w-full h-full object-cover" alt="Avatar"/>{isEditing && !isCurrentUserBanned && <div onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"><Camera className="w-8 h-8 text-white/90" /></div>}</div>
                       <input type="file" ref={avatarInputRef} className="absolute opacity-0 pointer-events-none" accept="image/*" onChange={(e) => handleUpload(e, 'avatar')} />
                     </div>
                   </div>
 
                   <div className="text-left mb-8 space-y-2">
-                    {isEditing ? (
+                    {isEditing && !isCurrentUserBanned ? (
                       <>
                         {/* Editable displayTitle */}
                         <input className="text-2xl font-normal w-full border-b border-transparent hover:border-blue-100 focus:border-blue-500 outline-none bg-transparent transition-colors px-1 -ml-1 rounded" value={displayData.displayTitle || displayData.name} onChange={(e) => updateProfile('displayTitle', e.target.value)} placeholder="你的自定义标题" />
@@ -541,16 +663,29 @@ const App = () => {
                         <p className="text-gray-500 font-normal text-sm leading-relaxed whitespace-pre-wrap">{displayData.bio}</p>
                       </>
                     )}
+                     {displayData.isBanned && <p className="text-xs text-red-500 font-medium mt-2">此账户已被禁用，无法保存更改。</p>}
                   </div>
 
                   <div className="space-y-3">
                     {displayData.links.map((item, idx) => {
-                      const dragProps = isEditing ? { draggable: true, onDragStart: (e) => { dragItem.current = idx; e.target.style.opacity = '0.5'; }, onDragEnter: (e) => dragOverItem.current = idx, onDragEnd: (e) => { handleSort(); e.target.style.opacity = '1'; document.querySelectorAll('.drag-over-style').forEach(el => el.classList.remove('drag-over-style')); }, onDragOver: (e) => e.preventDefault() } : {};
-                      if (item.type === 'divider') return isEditing ? <div key={idx} {...dragProps} className="group relative py-3 flex items-center justify-center cursor-move hover:bg-gray-50 rounded-lg transition-colors"><GripVertical className="absolute left-2 text-gray-300 w-4 h-4 opacity-0 group-hover:opacity-100" /><div className="w-full border-t border-dashed border-gray-300 mx-8" /><button onClick={() => removeLink(idx)} className="absolute right-2 p-1 text-red-400 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4" /></button><span className="absolute bg-white px-2 text-[10px] text-gray-400 font-normal">分割线</span></div> : <div key={idx} className="py-2"><div className="border-t border-gray-100" /></div>;
-                      if (item.type === 'header') { const textAlign = item.align === 'center' ? 'text-center' : item.align === 'right' ? 'text-right' : 'text-left'; return isEditing ? <div key={idx} {...dragProps} className="group relative flex items-center gap-2 p-1 border border-transparent hover:border-blue-200 rounded-lg transition-colors cursor-move"><GripVertical className="text-gray-300 w-4 h-4 opacity-0 group-hover:opacity-100" /><div className="flex gap-1 bg-gray-50 rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => updateLink(idx, 'align', 'left')} className="p-1 rounded hover:bg-white"><AlignLeft className="w-3 h-3" /></button><button onClick={() => updateLink(idx, 'align', 'center')} className="p-1 rounded hover:bg-white"><AlignCenter className="w-3 h-3" /></button><button onClick={() => updateLink(idx, 'align', 'right')} className="p-1 rounded hover:bg-white"><AlignRight className="w-3 h-3" /></button></div><input className={`flex-1 font-normal text-gray-500 text-sm bg-transparent outline-none ${textAlign}`} value={item.title} onChange={(e) => updateLink(idx, 'title', e.target.value)} /><button onClick={() => removeLink(idx)} className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4" /></button></div> : <h3 key={idx} className={`font-normal text-gray-500 text-sm mt-6 mb-2 ${textAlign}`}>{item.title}</h3>; }
+                      // Drag/Drop and Touch Events for Mobile Dragging
+                      const dragProps = isEditing && !isCurrentUserBanned ? { 
+                        draggable: true, 
+                        onDragStart: (e) => handleDragStart(e, idx), 
+                        onDragEnter: (e) => handleDragEnter(e, idx), 
+                        onDragEnd: handleDragEnd, 
+                        onDragOver: (e) => e.preventDefault(),
+                        onTouchStart: (e) => handleTouchStart(e, idx),
+                        onTouchMove: handleTouchMove,
+                        onTouchEnd: handleTouchEnd,
+                        'data-drag-index': idx
+                      } : {};
+
+                      if (item.type === 'divider') return isEditing && !isCurrentUserBanned ? <div key={idx} {...dragProps} className="group relative py-3 flex items-center justify-center cursor-move hover:bg-gray-50 rounded-lg transition-colors"><GripVertical className="absolute left-2 text-gray-300 w-4 h-4 opacity-0 group-hover:opacity-100" /><div className="w-full border-t border-dashed border-gray-300 mx-8" /><button onClick={() => removeLink(idx)} className="absolute right-2 p-1 text-red-400 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4" /></button><span className="absolute bg-white px-2 text-[10px] text-gray-400 font-normal">分割线</span></div> : <div key={idx} className="py-2"><div className="border-t border-gray-100" /></div>;
+                      if (item.type === 'header') { const textAlign = item.align === 'center' ? 'text-center' : item.align === 'right' ? 'text-right' : 'text-left'; return isEditing && !isCurrentUserBanned ? <div key={idx} {...dragProps} className="group relative flex items-center gap-2 p-1 border border-transparent hover:border-blue-200 rounded-lg transition-colors cursor-move"><GripVertical className="text-gray-300 w-4 h-4 opacity-0 group-hover:opacity-100" /><div className="flex gap-1 bg-gray-50 rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => updateLink(idx, 'align', 'left')} className="p-1 rounded hover:bg-white"><AlignLeft className="w-3 h-3" /></button><button onClick={() => updateLink(idx, 'align', 'center')} className="p-1 rounded hover:bg-white"><AlignCenter className="w-3 h-3" /></button><button onClick={() => updateLink(idx, 'align', 'right')} className="p-1 rounded hover:bg-white"><AlignRight className="w-3 h-3" /></button></div><input className={`flex-1 font-normal text-gray-500 text-sm bg-transparent outline-none ${textAlign}`} value={item.title} onChange={(e) => updateLink(idx, 'title', e.target.value)} /><button onClick={() => removeLink(idx)} className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4" /></button></div> : <h3 key={idx} className={`font-normal text-gray-500 text-sm mt-6 mb-2 ${textAlign}`}>{item.title}</h3>; }
                       return (
                         <div key={idx} {...dragProps} className="relative group/item">
-                          {isEditing ? (
+                          {isEditing && !isCurrentUserBanned ? (
                             <div className={`flex items-center p-2 bg-white border border-gray-200 shadow-sm transition-all cursor-move hover:shadow-md ${RADIUS_OPTIONS[config.linkRadius]}`}>
                               <div className="mr-2 cursor-move text-gray-300 hover:text-gray-500"><GripVertical className="w-4 h-4" /></div>
                               <button onClick={() => setPickingIconIndex(idx)} className="p-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors mr-3">{renderIcon(item.type)}</button>
@@ -567,7 +702,7 @@ const App = () => {
                         </div>
                       );
                     })}
-                    {isEditing && (
+                    {isEditing && !isCurrentUserBanned && (
                       <div className="grid grid-cols-3 gap-3 mt-6">
                         <button className="py-3 border border-dashed border-gray-300 hover:border-blue-400 rounded-xl text-gray-500 hover:text-blue-600 hover:bg-blue-50/30 transition-all flex flex-col items-center justify-center gap-1.5 font-normal text-xs" onClick={() => addLinkItem('link')}><Plus className="w-4 h-4" />加链接</button>
                         <button className="py-3 border border-dashed border-gray-300 hover:border-purple-400 rounded-xl text-gray-500 hover:text-purple-600 hover:bg-purple-50/30 transition-all flex flex-col items-center justify-center gap-1.5 font-normal text-xs" onClick={() => addLinkItem('header')}><Type className="w-4 h-4" />加标题</button>
@@ -576,7 +711,7 @@ const App = () => {
                     )}
                   </div>
 
-                  {isEditing && (
+                  {isEditing && !isCurrentUserBanned && (
                     <div className="mt-8 pt-6 border-t border-gray-100 animate-in slide-in-from-bottom-4">
                       <div className="mb-6">
                         <div className="flex items-center justify-between mb-3">
@@ -609,7 +744,7 @@ const App = () => {
 
         {/* Render Admin Dashboard */}
         {view === 'admin' && isAdmin && (
-            <AdminDashboard users={allUsers} fetchUsers={fetchAllUsers} />
+            <AdminDashboard users={allUsers} fetchUsers={fetchAllUsers} adminName={adminName} />
         )}
 
       </main>
