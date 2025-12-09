@@ -56,7 +56,7 @@
 ### 2. 数据库初始化 (Database Initialization)
 1. 登录 Cloudflare 控制台（Dashboard）。
 2. 导航至 `Workers & Pages` -> `D1 SQL Database`。
-3. 点击 **Create**，创建一个名为 `web-card-db` 的数据库实例。
+3. 点击 **Create**，创建一个名为 `webcard-db` 的数据库实例。
 4. 进入数据库详情页，选择 **Console** 标签页，粘贴并执行以下 SQL 语句以初始化数据表结构：
 
 ```sql
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS users (
 - 定位至 **D1 Database Bindings** 区域。
 - 点击 **Add binding**：
     - **Variable name**: 输入 `DB` (注意：必须保持大写，以便代码识别)
-    - **D1 Database**: 选择步骤 2 中创建的 `web-card-db`。
+    - **D1 Database**: 选择步骤 2 中创建的 `webcard-db`。
 
 #### B. 管理员账号配置 (Admin Credentials)
 - 进入项目设置页面 `Settings` -> `Environment variables`。
