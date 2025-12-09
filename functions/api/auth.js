@@ -6,7 +6,7 @@ export async function onRequestPost(context) {
 
     // 1. 管理员登录 (优先检查环境变量)
     if (body.username === env.ADMIN_USER && body.password === env.ADMIN_PASS) {
-      // 生成管理员 Token (生产环境建议使用真正的签名算法)
+      // 生成管理员 Token
       const token = btoa(JSON.stringify({ user: 'admin', role: 'admin' })) + '.sign';
       return jsonResp({ name: 'admin', role: 'admin' }, token);
     }
@@ -16,7 +16,6 @@ export async function onRequestPost(context) {
     
     if (user) {
       // A. 用户存在：验证密码
-      // 注意：这里为了演示使用的是明文比对。在生产环境中，请务必在存储前使用 bcrypt 等库对密码进行哈希处理。
       if (user.password === body.password) {
         const token = btoa(JSON.stringify({ user: user.name, role: 'user' })) + '.sign';
         return jsonResp({ name: user.name, role: 'user' }, token);
@@ -28,16 +27,17 @@ export async function onRequestPost(context) {
       }
     } else {
       // B. 用户不存在：自动注册
-      // 初始化新用户的默认数据
+      // 初始化新用户的默认数据：【新增 displayTitle 字段】
       const initialData = JSON.stringify({ 
-        // 保持 name 作为内部标识
         name: body.username, 
-        // 【新增字段】用作用户卡片上的大标题，默认为注册名
-        displayTitle: body.username, 
-        links: [], 
-        theme: 'blue',
-        bio: 'Hello World!',
-        config: { cardRadius: '3xl', avatarRadius: 'full', linkRadius: 'xl' }
+        displayTitle: body.username, // 默认使用注册名作为展示标题
+        avatar: '', 
+        bgImage: null,
+        customColor: null,
+        bio: '这里是简介...',
+        config: { cardRadius: '3xl', avatarRadius: 'full', linkRadius: 'xl' },
+        links: [],
+        theme: 'blue'
       });
 
       // 插入新用户到数据库
@@ -58,7 +58,7 @@ function jsonResp(data, token) {
   return new Response(JSON.stringify({ user: data }), {
     headers: {
       'Content-Type': 'application/json',
-      // 设置 HttpOnly Cookie，确保安全
+      // 设置 HttpOnly Cookie
       'Set-Cookie': `auth_token=${token}; HttpOnly; Secure; Path=/; Max-Age=86400; SameSite=Lax`
     }
   });

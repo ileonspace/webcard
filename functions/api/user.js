@@ -9,7 +9,7 @@ export async function onRequest(context) {
 
     const token = cookie.split('auth_token=')[1].split(';')[0];
     try {
-      // 危险：生产环境请校验签名 (在您的简单实现中，只解析了 base64 部分)
+      // 危险：生产环境请校验签名
       return JSON.parse(atob(token.split('.')[0])); 
     } catch (e) {
       return null;
@@ -34,8 +34,7 @@ export async function onRequest(context) {
             const users = results.map(user => ({
                 name: user.name,
                 created_at: user.created_at,
-                // 解析 data 字段，以便前端直接使用对象
-                data: JSON.parse(user.data) 
+                data: JSON.parse(user.data) // 解析 JSON 字符串
             }));
 
             return new Response(JSON.stringify(users), {
@@ -74,20 +73,18 @@ export async function onRequest(context) {
       const username = userRole.user; 
       data.name = username; 
 
-      // 2. 使用 UPDATE 语句，只更新 data 字段
+      // 2. 【核心修复】：使用 UPDATE 语句，只更新 data 字段
       const result = await env.DB.prepare(
         'UPDATE users SET data = ?1 WHERE name = ?2'
       ).bind(JSON.stringify(data), username).run();
       
       // 检查是否更新成功 (rows_affected 应该大于 0)
       if (result.meta.rows_affected === 0) {
-          // 如果没有行受到影响，返回 404 错误
           return new Response('User record not found in DB for update.', { status: 404 });
       }
 
       return new Response('Saved successfully');
     } catch (e) {
-      // 记录详细的错误信息
       console.error('Save Error:', e.message);
       return new Response('Server Error: ' + e.message, { status: 500 });
     }
