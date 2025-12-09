@@ -327,20 +327,22 @@ const App = () => {
       }
   }, [isAdmin]);
 
-  // Initialization: Fetch user data based on URL path
+  // Initialization: Check for current user and fetch data
   useEffect(() => {
-    // 【修复点】：更健壮地解析 URL 路径以获取用户名
-    // 1. 获取路径，移除前后斜杠
+    // 1. Get path, remove leading/trailing slash
     let path = window.location.pathname.replace(/^\/|\/$/g, ''); 
     
-    // 2. Safely extract the last segment, assuming the username is the last segment
+    // 2. Safely extract the last segment as the intended username
     const segments = path.split('/');
-    const cleanPath = segments.pop() || ''; // Get the last segment, or empty string
+    const username = segments.pop() || 'admin'; // Use 'admin' as default view
     
-    const username = cleanPath || 'admin'; // 默认显示 admin
+    // 3. TODO: In production, add a fetch('/api/check-session') here
+    // to verify the auth_token cookie and set the actual currentUser status.
     
-    // Simulating admin login for initial testing
-    setCurrentUser({ name: 'admin', role: 'admin' });
+    // 【移除硬编码】：不再强制设置 currentUser，让登录按钮生效
+    // setCurrentUser({ name: 'admin', role: 'admin' }); // <-- REMOVED THIS LINE
+
+    // Now, if no cookie is present, currentUser remains null, showing Login button.
     
     fetchUser(username);
   }, []);
@@ -356,7 +358,7 @@ const App = () => {
   const fetchUser = async (username) => {
     setLoadingData(true);
     try {
-      // 这里的 username 现在应该是一个干净的字符串
+      // The username should now be clean
       const res = await fetch(`/api/user?name=${username}`);
       if (res.ok) {
         const data = await res.json();
@@ -372,11 +374,28 @@ const App = () => {
   };
 
   const handleLogin = (user) => {
+    // 【修改点】：登录成功后，才设置 currentUser 状态
     setCurrentUser(user);
     setShowLogin(false);
+    // 导航到该用户的主页
     window.history.pushState({}, '', `/${user.name}`);
     fetchUser(user.name);
   };
+
+  const handleLogout = () => {
+    // 1. 清除前端状态
+    setCurrentUser(null);
+    setIsEditing(false);
+    setView('card');
+    
+    // 2. 清除 Cookie (需要后端支持 /api/logout 或前端手动清除)
+    // 简单粗暴的清除方式（如果 Cookie 不是 HttpOnly）：
+    document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    
+    // 3. 重定向到首页或默认页面
+    window.location.pathname = '/'; 
+  };
+
 
   const handleSave = async () => {
     if (!tempProfile) return;
@@ -477,7 +496,8 @@ const App = () => {
               {currentUser.name === viewUser?.name && view === 'card' && (
                 <Button variant={isEditing ? "primary" : "secondary"} icon={isEditing ? Save : Edit2} onClick={() => { if (isEditing) handleSave(); else { setTempProfile({ ...viewUser }); setIsEditing(true); } }}>{isEditing ? '保存' : '编辑'}</Button>
               )}
-              <Button variant="ghost" icon={LogOut} className="!bg-white/80 backdrop-blur shadow-sm" onClick={() => { setCurrentUser(null); setIsEditing(false); window.location.pathname = '/'; }} />
+              {/* 【修改点】：退出按钮调用新的 handleLogout 函数 */}
+              <Button variant="ghost" icon={LogOut} className="!bg-white/80 backdrop-blur shadow-sm" onClick={handleLogout} />
             </>
           ) : (
             <Button variant="primary" onClick={() => setShowLogin(true)}>登录</Button>
